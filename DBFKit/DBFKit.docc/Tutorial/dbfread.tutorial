@@ -1,0 +1,42 @@
+@Tutorial(time: 5) {
+    @Intro(title: "Reading DBF Files") {
+        Reading DBF files using DBFKit is very easy. You only have one function to execute!
+        
+        @Image(source: <#file#>, alt: "<#accessible description#>")
+    }
+    
+    @Section(title: "Reading DBF Files") {
+        @ContentAndMedia {
+            For this chapter, make sure you know how to use the DBFTable class. You should also know how to retrieve all columns and rows of the table using **getColumns** and **getRows**
+            
+            @Image(source: <#file#>, alt: "<#accessible description#>")
+        }
+        
+        @Steps {
+            @Step {
+                We will be learning about a new class called **DBFFile**. This class is what will help us read a DBF File.
+                
+                @Image(source: <#file#>, alt: "<#accessible description#>")
+            }
+            
+            @Step {
+                To start with, initialize the DBFFile class with the path to the DBF file like shown in the code
+                
+                @Code(name: "ReadDBFFile.swift", file: "dbfread example.swift")
+            }
+            
+            @Step {
+                Now, in a do-catch block, call the _read_ function.
+                
+                @Code(name: "ReadDBFFile.swift", file: "dbfread example.swift")
+            }
+            
+            @Step {
+                Lastly, assuming no errors occured during the read, just get the table that was read with the **getDBFTable** function
+                You can also get other useful information read in the dbf file using the function **getVersion**, **getNumRecords**, and **getLastUpdate**
+                
+                @Code(name: "ReadDBFFile.swift", file: "dbfread example.swift")
+            }
+        }
+    }
+}

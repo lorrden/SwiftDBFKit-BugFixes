@@ -1,0 +1,101 @@
+@Tutorial(time: 5) {
+    @Intro(title: "The DBF Table") {
+        DBF files are basic files that essentially have a table written to them in a fancy way. In this chapter, we will learn about what they look like and how we can make our own table
+        
+        //@Image(source: <#file#>, alt: "<#accessible description#>")
+    }
+    
+    @Section(title: "What is a DBF Table?") {
+        @ContentAndMedia {
+            All DBF files contain a special table. This table carries columns with a specific type and a specific length.
+            
+            //@Image(source: <#file#>, alt: "<#accessible description#>")
+        }
+        
+        @Steps {
+            @Step {
+                Before we begin writing any code, it is important to understand the structure of the tables written to DBF files. To start with, the table must have a set number of columns and rows. Each column must have a valid data type and a length.
+                The data type of the column simply refers to what type of values the column will carry. There are many types, but for the sake of simplicity in this tutorial, we will be using the Char (String) type here. 
+                The length of the column refers to the maximum length allowed for all the values in the row. **The length must not be bigger than 254**. And note that this _does not_ mean that all the values the column contains must be of that length. It could be less in fact! As long as it does not exceed the maximum length allowed, the value can be stored into the column
+            }
+            
+            @Step {
+                Lets have a look at the following code. To make a DBF table, use the **DBFTable** class. The class doesn't take any data for the constructor, so it should be easy to initialize.
+                Before adding any other data, we must add the columns first.
+                
+                @Code(name: "UsingDBFTableExample.swift", file: "dbftable example.swift")
+            }
+            
+            @Step {
+                To add a column, we can use the **addColumn** function. But note that errors are thrown if we add columns improperly (for instance setting the length of the column greater than 254). Hence, we must wrap it around a do-catch block as shown in the sample code.
+                addColumn accepts 3 parameters. You need to pass in the column name, data type (which should conform to the enumeration _DBFTable.ColumnType_), and a maximum length (which should not be bigger than 254 as per the specifications of DBF files)
+                
+                @Code(name: "UsingDBFTableExample.swift", file: "dbftable example.swift")
+            }
+            
+            @Step {
+                **You will not** be able to add any rows until the number of columns is set. So once you are done adding your rows, call the **lockColumnAdding** (as shown in the code) to enable row writing
+                
+                @Code(name: "UsingDBFTableExample.swift", file: "dbftable example.swift")
+            }
+            
+            @Step {
+                We can add rows with the **addRow** function which accepts a parameter of an array of strings. Note that this function must also be wrapped around a do-catch block as it does throw errors. One notable error it can throw is if the number of elements given in the array is not the same number of columns you added.
+                _Note that upon writing the DBFTable, DBFKit will automatically convert the strings you passed in as arguments to the function to the proper data type you listed in the column_
+                
+                @Code(name: "UsingDBFTableExample.swift", file: "dbftable example.swift")
+            }
+            
+            @Step {
+                The last important thing to mention about the DBFTable is how to retrieve the columns and rows added. You can use the **getColumns** and **getRows** functions to retrieve the data you want respectively.
+                
+                @Code(name: "UsingDBFTableExample.swift", file: "dbftable example.swift")
+            }
+        }
+    }
+    @Assessments {
+        @MultipleChoice {
+            What are columns composed of in a DBF table?
+            @Choice(isCorrect: false) {
+                Column name and type
+                @Justification(reaction: "Incorrect!") {
+                    There is one more extremely important data type when dealing with columns
+                }
+            }
+            @Choice(isCorrect: true) {
+                Column name, type, and size
+                @Justification(reaction: "Correct!") {
+                    These are the 3 most important data types required for columns in a DBF table.
+                }
+            }
+            @Choice(isCorrect: false) {
+                Column name
+                @Justification(reaction: "Incorrect!") {
+                    More data is required...
+                }
+            }
+        }
+        @MultipleChoice {
+            How do you add rows to DBFTable? Assume the variable _ourTable_ has been properly initialized to DBFTable and there are 2 columns.
+            @Choice(isCorrect: false) {
+                ourTable.addRow(with: [1, "Airplanes"])
+                @Justification(reaction: "Incorrect!") {
+                    There are a few critical errors with this. The first of which you have to pass in an array of Strings, not a mixed type. The second type is that addRow can throw an error. What does that tell you?
+                }
+            }
+            @Choice(isCorrect: false) {
+                ourTable.addRow(with: ["1", "Airplanes"])
+                @Justification(reaction: "Incorrect!") {
+                    You are missing an important statement. Keep in mind addRow can throw errors
+                }
+            }
+            @Choice(isCorrect: true) {
+                // assuming we are in a do-catch block
+                try ourTable.addRow(with: ["1", "Airplanes"])
+                @Justification(reaction: "Correct!") {
+                    addRow can throw an error if, for instance, the number of elements we give it is not the same as the number of columns. So we must execute it in a do-catch block.
+                }
+            }
+        }
+    }
+}

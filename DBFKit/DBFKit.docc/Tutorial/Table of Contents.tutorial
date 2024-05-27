@@ -1,0 +1,27 @@
+@Tutorials(name: "DBFKit Tutorial") {
+    @Intro(title: "Introduction") {
+        DBFKit allows you to read and write DBF files using Swift.
+        
+        //@Image(source: <#file#>, alt: "<#accessible description#>")
+    }
+    
+    @Chapter(name: "The DBF Table") {
+        Learn about what DBF files look like in the background, and how to make our own DBF table. This will help us for reading and writing DBFs
+        
+        //@Image(source: <#file#>, alt: "<#accessible description#>")
+        
+        @TutorialReference(tutorial: "doc:dbftable")
+    }
+    
+    @Chapter(name: "Writing DBF Files") {
+        Learn about how to use a DBFTable to write to a DBF file
+        
+        @TutorialReference(tutorial: "doc:dbfwrite")
+    }
+    
+    @Chapter(name: "Reading DBF Files") {
+        Learn about how to read DBF files with DBFKit
+        
+        @TutorialReference(tutorial: "doc:dbfread")
+    }
+}

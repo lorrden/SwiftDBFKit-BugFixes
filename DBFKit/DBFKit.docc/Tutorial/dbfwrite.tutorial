@@ -1,0 +1,92 @@
+@Tutorial(time: 5) {
+    @Intro(title: "Writing DBF Files") {
+        In this chapter, we will learn how to use DBFTable to write to a DBF file
+        
+        @Image(source: <#file#>, alt: "<#accessible description#>")
+    }
+    
+    @Section(title: "Writing DBF Files") {
+        @ContentAndMedia {
+            This chapter utilizes the _DBFTable_ class. Make sure you are familiar with what it is and how to use it for this chapter
+            
+            @Image(source: <#file#>, alt: "<#accessible description#>")
+        }
+        
+        @Steps {
+            @Step {
+                We will be introducing a new class in this chapter called **DBFWriter**, which as the name implies, will help us write to DBF Files.
+                
+                @Image(source: <#file#>, alt: "<#accessible description#>")
+            }
+            
+            @Step {
+                In this example, we have a variable, _ourTable_ which we will assume has some columns and rows in it. Lets initialize the DBFWriter class with the table.
+                
+                @Code(name: "WriteToDBF.swift", file: "dbfwrite example.swift")
+            }
+            
+            @Step {
+                We now only have one step left to complete. In a do-catch block, we execute **ourWriter.write** to write to the dbf file. And that's how easy it is to write to a DBF file with DBFKit!
+                
+                @Code(name: "WriteToDBF.swift", file: "dbfwrite example.swift")
+            }
+        }
+        
+        @Assessments {
+            @MultipleChoice {
+                Initialize the DBFWriter class for writing to a DBF. Assume _theTable_ is a DBFTable and has columns and rows in it
+                
+                @Choice(isCorrect: true) {
+                    ```swift
+                    let theWriter: DBFWriter = DBFWriter(dbfTable: theTable)
+                    ```
+                    @Justification(reaction: "Correct!") {
+                        That's right! We pass into the DBFWriter our table right away
+                    }
+                }
+                
+                @Choice(isCorrect: false) {
+                    ```swift
+                    do {
+                        let theWriter: DBFWriter = try DBFWriter(dbfTable: theTable)
+                    } catch {
+                        print("\(error)")
+                    }
+                    ```
+                    @Justification(reaction: "Incorrect!") {
+                        No need to use a do-catch and a "try" statement here, as the constructor doesn't throw any errors
+                    }
+                }
+            }
+            @MultipleChoice {
+                Assume the variable _theWriter_ has been properly initialized with a DBFTable. Also assume the variable _thePath_ has been properly initialized with a URL to a dbf file. Write to the dbf file
+                @Choice(isCorrect: false) {
+                    ```swift
+                    theWriter.write(to: thePath)
+                    ```
+                    @Justification(reaction: "Incorrect!") {
+                        Keep in mind the "write" function can throw an error.
+                    }
+                }
+                @Choice(isCorrect: true) {
+                    ```swift
+                    do {
+                        try theWriter.write(to: thePath)
+                    } catch {
+                        print("\(error)")
+                    }
+                    ```
+                    @Justification(reaction: "Correct!") {
+                        the "write" function can throw an error, so we have to execute it an a do-catch block
+                    }
+                }
+                @Choice(isCorrect: false) {
+                    None of the above
+                    @Justification(reaction: "Incorrect!") {
+                        One of the answers is correct.
+                    }
+                }
+            }
+        }
+    }
+}
