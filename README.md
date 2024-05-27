@@ -31,7 +31,7 @@ I have designed the API to be very easy to use. I will give a demonstration of h
 
 ### The DBFTable
 
-Note that DBF files basically carry databases. These databases have tables whcih consist of columns and rows. So you will first need to make a table for writing.
+Note that DBF files basically carry databases. These databases have tables which consist of columns and rows. So you will first need to make a table for writing.
 
 ```swift
 import Foundation
