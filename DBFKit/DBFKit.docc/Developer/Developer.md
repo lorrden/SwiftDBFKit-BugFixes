@@ -105,19 +105,19 @@ The maximum column length allowed is 254. Also, the number should be a 16 bit in
 ---
 
 ## Writing the Rows
-This is the easiest thing to write! Believe it or not, you begin writing the rows only two bytes after the column array terminator (which you would fill in with 0x0D for that byte).
+This is the easiest thing to write! Believe it or not, you begin writing the rows after the array field terminator byte (0x0D). The first byte in a row should determine if the row (or record) is marked as deleted or not. If the row is not deleted, it should be marked with a space (0x0020), else mark it with an asterik (0x2A).
 
 Lets have a look at this example. Assume we have two columns, "User" (which has a max length of 40 and is of type C) and "score" (which has a max length of 2 and is of type N). Lets say we are trying to write the following row with the elements "John" and "22".
 
-We would write it as follows. We start two bytes after the terminator, and for every character in "John", we would convert it to ASCII, and fill it into the respective byte. So the ASCII code of J would be the first thing we fill in for n + 2 (where n is the byte of where the terminator is), the ASCII code of o would be the next thing we fill in for n + 3 and so on.
+We would write it as follows. We start one byte after the terminator. For that byte, we will mark it with a space (0x0020) to mark the record as active. Then we move onto the next byte(s). Then for every character in "John", we would convert it to ASCII, and fill it into the respective byte. So the ASCII code of J would be the first thing we fill in for n + 2 (where n is the byte of where the terminator is), the ASCII code of o would be the next thing we fill in for n + 3 and so on.
 
 But you will notice that "John" doesn't use up the whole 40 character length limit. So what do we fill in with the rest of the 36 bytes? We fill it in with nothing. Once we are done writing the data, we move onto the next item to write.
 
 For the next item to write, which is "22", we must start at the next valid byte. The next valid byte is when the next column would begin, which would be on byte n + 42. (n + 2 for the terminator, and + 40 for the length of the previous column). And the pattern continues for each element in the row.
 
-Once we are done writing a row, and we are ready to start writing the next one, we begin writing it on byte n + 1 (where n is the byte where the previous row ends), and the pattern continues
+Once we are done writing a row, and we are ready to start writing the next one, we begin writing it on byte n + 1 (where n is the byte where the previous row ends), and the pattern continues. Remember that the first byte written for any row is the byte that determines if the row is active or not. So on byte n + 1, mark it with a space or asterik, then continue the pattern.
 
-After we have finished writing all the rows, we don't need to do anything more. Sometimes, the EOF (end of file) marker is put at the end after all rows are written, but it is not necessary to do it.
+After we have finished writing all the rows, we don't need to do anything more. The very last byte (or the one after the last row) is the eof marker. That is 0x1A.
 
 ---
 

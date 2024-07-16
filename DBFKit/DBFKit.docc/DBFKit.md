@@ -8,8 +8,6 @@ DBFKit is a framework written in Swift which allows you to read and write DBF fi
 
 _1 Please Note: DBFKit has NOT been tested with other dBase file types!_
 
-**DBFKit has been made purely from reverse engineering**. It has been tested enough to be shown that it won't throw an unexpected error on write or read, but that doesn't mean errors won't occur. Use at your own risk!
-
 ## Topics
 
 ### Making DBF Table

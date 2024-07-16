@@ -3,7 +3,7 @@
 ## About DBFKit
 DBFKit is a very easy way to read and write DBF files. It has been implemented completely in Swift, and should work with most modern iOS and MacOS versions.
 
-I decided to make this framework because I was working on a software (obviously I was using Swift to build an application) and I needed to be able to export DBF files. Since there is no framework or library written in Swift that achieves this, I built one. As a matter of fact, I reverse engineered it!
+I decided to make this framework because I was working on a software (obviously I was using Swift to build an application) and I needed to be able to export DBF files. Since there is no framework or library written in Swift that achieves this, I built one.
 
 DBFKit should work with any DBF version (such as FoxPro and dBase III) for both reading and writing. I was able to test the writing capabilities by giving it to another dbf reader that is known to work to test the results. I used the famous python framework [dbfread](https://github.com/olemb/dbfread) to make sure all values can be properly read. Along with the reading capabilities of DBFKit I implemented on my own, I tested it with dbfread to make sure I get the same results.
 
@@ -18,10 +18,9 @@ DBFKit should work with any DBF version (such as FoxPro and dBase III) for both 
 ---
 
 ## Installation
-### DBFKit - 1.0
+### DBFKit - 1.1
 
-To install, download this repository, and build with **xcbuild**
-Alternatively, you can download the single "dbf.swift" file and include that in your application to use DBFKit related functions.
+To install, download the single "dbf.swift" file and include that in your application to use DBFKit related functions.
 
 DBFKit is designed to work on both MacOS and iOS (any version should work, but later ones are reccomended)
 
@@ -35,7 +34,6 @@ Note that DBF files basically carry databases. These databases have tables which
 
 ```swift
 import Foundation
-import DBFKit // this is how to activate the library in the file
 
 // in order to write to DBF files, you must have a DBF table ready
 // little note, when we write/read from DBF files, we are working with tables, dbf files are literally a database!
@@ -60,6 +58,9 @@ do {
     try table.addRow(with: ["John", "admin", "pass"])
     try table.addRow(with: ["Doe", "coordinator", "pass2"])
     try table.addRow(with: ["Anna", "normal_user", "pass3"])
+    
+    // you can also include deleted rows by adding on the deleted attribute
+    try table.addRow(with: ["Old", "normal_user", "pass4"], deleted: true) // marks record as deleted
 } catch {
     print("\(error)")
 }
@@ -109,14 +110,12 @@ do {
 
 ## Research
 
-Like I said before, I completely reversed engineered how to read and write DBF files. Below are the sources I used to help me reverse engineer DBF files
+Below are the sources I used to help me implement this.
 
 - https://en.wikipedia.org/wiki/.dbf
 - https://www.dbase.com/Knowledgebase/INT/db7_file_fmt.htm
 
 Along with this, I have included the "Developer" folder which showed the process of how I reversed engineered this, and how DBF files are actually written. 
-
-**Important Note**: Like I said, I have reversed engineered this whole thing. I keep repeating this because it is important to acknowledge that errors could occur on either read or write. The user should be aware, however, that I tested this framework multiple times to make sure other DBF readers can read what DBFKit writes. All the test cases succeeded. I am hoping that in the future, as I learn more about DBF files and work on future version of DBFKit, that I catch any errors or bugs that occur in DBFKit. **Use at your own risk!**
 
 ## Time Complexity
 

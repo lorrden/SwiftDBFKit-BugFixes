@@ -26,7 +26,7 @@ class DBFTable {
     /**
      * A column data type
      * - Version: 1.0
-     * - Since: 2.0
+     * - Since: 1.0
      */
     enum ColumnType: Character {
         /// Represents the column type string
@@ -97,6 +97,12 @@ class DBFTable {
      * - Since: 1.0
      */
     private var rows: [[String]] = []
+    /**
+     * All deleted rows (records) from the dbf file
+     * - Version: 1.0
+     * - Since: 1.1
+     */
+    private var deleted_rows: [[String]] = []
     
     /**
      * Locks column adding
@@ -163,6 +169,33 @@ class DBFTable {
         // now add
         self.rows.append(data)
     }
+    /**
+     * Adds a row to the DBF table. Time complexity: O(1)
+     * - Parameters:
+     *  - data: Required. An array of string to add for the data
+     *  - deleted: Optional. If the row (record) is deleted
+     * - Throws: An error if the adding column property is not locked or if the number of values in data is not the same as the number of columns
+     * - Version: 1.0
+     * - Since: 1.1
+     */
+    public func addRow(with data: [String], deleted: Bool) throws {
+        // make sure adding columns is locked
+        if !self.isColumnLocked {
+            throw DBFError.ROW_ADD_ERR("Cannot add rows to the table because adding columns is not locked")
+        }
+        // make sure the length of data is the same as the number of columns in the table
+        if data.count != self.columns.count {
+            throw DBFError.ROW_ADD_ERR("Cannot add a row to the table because it does not have the same number of values as the number of columns added in the table. Row value count: \(data.count), Column count: \(self.columns.count)")
+        }
+        // check if record is deleted
+        if deleted {
+            // add to list of deleted rows
+            self.deleted_rows.append(data)
+            return
+        }
+        // now add
+        self.rows.append(data)
+    }
     
     /**
      * A simple getter for the columns added
@@ -182,6 +215,15 @@ class DBFTable {
      */
     public func getRows() -> [[String]] {
         return self.rows
+    }
+    /**
+     * A simple getter for deleted rows (records)
+     * - Returns: An array of all rows which were removed from the dbf file
+     * - Version: 1.0
+     * - Since: 1.1
+     */
+    public func getDeletedRows() -> [[String]] {
+        return self.deleted_rows
     }
     
     /**
@@ -231,6 +273,21 @@ class DBFTable {
         }
         totalBytes += 1
         totalBytes = totalBytes * self.rows.count
+        return totalBytes
+    }
+    /**
+     * Gets the total number of bytes one record takes up in the DBF file. Time complexity: O(n) where n is the number of columns
+     * - Returns: An integer representing how many bytes on record (row) will take up
+     * - Version: 1.0
+     * - Since: 1.1
+     */
+    public func getTotalBytesOneRecord() -> Int {
+        // add up all field count
+        var totalBytes: Int = 0
+        for i in self.columns {
+            totalBytes += i.count
+        }
+        totalBytes += 1
         return totalBytes
     }
     
@@ -319,10 +376,49 @@ class DBFWriter {
     }
     
     /**
+     * Writes a record to a buffer
+     * - Parameters:
+     *  - buffer: Required. A pointer to a buffer to write to
+     *  - record: The record to write
+     * - Throws: An error on failure
+     * - Version: 1.0
+     * - Since: 1.1
+     */
+    private func writeBytesRecord(buffer: UnsafeMutablePointer<Data>, record: [String], current_offset: UnsafeMutablePointer<Int>) throws {
+        // this function already assumes that the record was already marked with an '*' or ' '
+        // all text should also be in ascii
+        var zi: Int = 0
+        for z in record {
+            // make sure z is not larger than the max length allowed for the column
+            if z.count > self.dbfTable.getColumns()[zi].count {
+                throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) exceeds the maximum length for column")
+            }
+            for j in z {
+                // should be 16 bit
+                buffer.pointee.withUnsafeMutableBytes { (bytess: UnsafeMutableRawBufferPointer) in
+                    bytess.storeBytes(of: UInt16(j.asciiValue!), toByteOffset: current_offset.pointee, as: UInt16.self)
+                }
+                current_offset.pointee += 1
+            }
+            // add spaces until we reach the max length for col
+            let space_add: Int = (self.dbfTable.getColumns()[zi].count - z.count)
+            var zzi: Int = 0
+            while zzi < space_add {
+                buffer.pointee.withUnsafeMutableBytes { (bytes: UnsafeMutableRawBufferPointer) in
+                    bytes.storeBytes(of: UInt16(0x0000), toByteOffset: current_offset.pointee, as: UInt16.self)
+                }
+                current_offset.pointee += 1
+                zzi += 1
+            }
+            zi += 1
+        }
+    }
+    
+    /**
      * Writes up the bytes for the dbf data. Time complexity: O((n \* m) + (r \* n \* m)) where n is the number of columns, m is the maximum length of each column, and r is the number of rows
      * - Returns: A buffer
      * - Throws: An error on write
-     * - Version: 1.0
+     * - Version: 1.1
      * - Since: 1.0
      */
     private func writeBytes() throws -> Data {
@@ -330,6 +426,7 @@ class DBFWriter {
 //        let buffer_len: Int = self.dbfTable.getTotalBytes()
         let header_len: Int = self.dbfTable.getTotalBytesHeader()
         let bytes_len: Int = self.dbfTable.getTotalBytesPerField()
+        let one_record_len: Int = self.dbfTable.getTotalBytesOneRecord()
 //        let buffer_len: Int = (header_len + bytes_len) * 6
         let buffer_len: Int = header_len + bytes_len + 1
         //TODO: BYTES PER RECORD
@@ -351,7 +448,8 @@ class DBFWriter {
         }
         // number of bytes per record
         buffer.withUnsafeMutableBytes { (bytess: UnsafeMutableRawBufferPointer) in
-            bytess.storeBytes(of: UInt16(bytes_len.littleEndian), toByteOffset: 10, as: UInt16.self)
+//            bytess.storeBytes(of: UInt16(bytes_len.littleEndian), toByteOffset: 10, as: UInt16.self)
+            bytess.storeBytes(of: UInt16(one_record_len.littleEndian), toByteOffset: 10, as: UInt16.self)
         }
         // columns (field descriptors)
         let cols: [DBFTable.DBFColumn] = self.dbfTable.getColumns()
@@ -384,49 +482,24 @@ class DBFWriter {
         // field descriptor array terminator
         buffer[current_offset] = 0x0D
         // now load records
-        buffer[current_offset + 1] = 0x0020
-        current_offset += 2
+        current_offset += 1
+//        buffer[current_offset + 1] = 0x0020
+//        current_offset += 2
         for i in self.dbfTable.getRows() {
-            // all text should also be in ascii
-            var zi: Int = 0
-            for z in i {
-                // make sure z is not larger than the max length allowed for the column
-                if z.count > self.dbfTable.getColumns()[zi].count {
-                    throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) exceeds the maximum length for column")
-                }
-                for j in z {
-                    // should be 16 bit
-                    buffer.withUnsafeMutableBytes { (bytess: UnsafeMutableRawBufferPointer) in
-                        bytess.storeBytes(of: UInt16(j.asciiValue!), toByteOffset: current_offset, as: UInt16.self)
-                    }
-                    current_offset += 1
-                }
-                // add spaces until we reach the max length for col
-                let space_add: Int = (self.dbfTable.getColumns()[zi].count - z.count)
-                var zzi: Int = 0
-                while zzi < space_add {
-                    buffer.withUnsafeMutableBytes { (bytes: UnsafeMutableRawBufferPointer) in
-                        //MARK: CHANGE1
-//                        bytes.storeBytes(of: UInt16(0x0020), toByteOffset: current_offset, as: UInt16.self)
-                        bytes.storeBytes(of: UInt16(0x0000), toByteOffset: current_offset, as: UInt16.self)
-                    }
-                    current_offset += 1
-                    zzi += 1
-                }
-                zi += 1
-                // add space
-//                buffer[current_offset] = 0x00
-                // increment space
-//                current_offset += 1
-            }
-            //MARK: CHANGE2
+            // add space to mark row present
             buffer[current_offset] = 0x0020
             current_offset += 1
+            try self.writeBytesRecord(buffer: &buffer, record: i, current_offset: &current_offset)
+        }
+        // add any deleted rows
+        for i in self.dbfTable.getDeletedRows() {
+            // deleted rows are marked with an '*'
+            buffer[current_offset] = 0x2A
+            current_offset += 1
+            try self.writeBytesRecord(buffer: &buffer, record: i, current_offset: &current_offset)
         }
         // eof flag
-        //MARK: CHANGE3
-//        buffer[current_offset] = 0x1A
-        // return buffer
+        buffer[current_offset] = 0x1A
         return buffer
     }
     
@@ -558,7 +631,7 @@ class DBFFile {
     /**
      * Reads the DBF file given. Time complexity: O((n \* m) + r) where n is the number of columns written, m is the length of each column name, and r is the number of rows
      * - Throws: An error on read
-     * - Version: 1.0
+     * - Version: 1.1
      * - Since: 1.0
      */
     public func read() throws {
@@ -590,10 +663,14 @@ class DBFFile {
         let rec: Int = Int(buffer[4])
         self.numRecords = rec
         
+        // use byte 10 for future comparison
+        let one_record_bytes: Int = Int(buffer[10])
+        
         // it is perfectly safe to skip to byte 32 where the col info begins
         // keep on collecting col info until the terminator is reached
         var current_byte: Int = 32
         var bytec: Int = 32
+        var expected_record_count: Int = 1
         while buffer[current_byte] != 0x0D {
             // byte 0-10 is field name (32-42)
             var field_name: String = ""
@@ -614,20 +691,37 @@ class DBFFile {
 //            let byteLenStart: Int = 16
             // get field length
             let field_len = buffer[current_byte + toType + 5]
+            expected_record_count += Int(field_len)
             // we don't need anymore data than this
             try self.dbfTable.addColumn(with: field_name, dataType: .init(rawValue: field_type)!, count: Int(field_len))
             bytec += 32
             current_byte = bytec
         }
+        // make sure expected record count matches what was written earlier
+        if expected_record_count != one_record_bytes {
+            throw DBFError.READ_ERROR("Byte 10 in dbf file (number of records in one byte) does not match total number of bytes accross all fields")
+        }
         // lock column add
         self.dbfTable.lockColumnAdding()
         // terminator reached, read records
-//        current_byte += 1
-        current_byte += 2
+        current_byte += 1
+//        current_byte += 2
         var collect: String = "" // for storing data we pick up
         var values_collected: [String] = [] // for storing our collected values
         var col_index: Int = 0 // for storing what index of the column we are at
+        var record_deleted: Bool = false
         while buffer[current_byte] != 0x1A {
+            if values_collected.count == 0 && collect.count == 0 && buffer[current_byte] == 0x2A {
+                // record deleted
+                record_deleted = true
+                current_byte += 1
+            } else if values_collected.count == 0 && collect.count == 0 && buffer[current_byte] == 0x0020 {
+                // record not deleted
+                current_byte += 1
+            } else if values_collected.count == 0 && collect.count == 0 {
+                // strange character
+                throw DBFError.READ_ERROR("Can't assert if the record is deleted")
+            }
             // collect values as we pick them up
             collect += String(UnicodeScalar(buffer[current_byte]))
             current_byte += 1
@@ -640,13 +734,14 @@ class DBFFile {
                 // make sure col index is still valid
                 if col_index >= self.dbfTable.getColumns().count {
                     // add row
-                    try self.dbfTable.addRow(with: values_collected)
+                    try self.dbfTable.addRow(with: values_collected, deleted: record_deleted)
+                    record_deleted = false // reset as necessary
                     // if we have reached the record count, break out of the loop
                     if self.dbfTable.getRows().count == rec {
                         break
                     }
                     col_index = 0 // reset col index
-                    // expect space or eof marker
+                    // expect eof marker
                     if current_byte >= buffer.count {
                         break
                     }
