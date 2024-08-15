@@ -290,6 +290,15 @@ class DBFTable {
         totalBytes += 1
         return totalBytes
     }
+    /**
+     * Gets the total number of records (both deleted and not deleted) in the table
+     * - Returns: An integer representing how many records there are
+     * - Version: 1.0
+     * - Since: 1.1
+     */
+    public func getTotalRecordCount() -> Int {
+        return self.rows.count + self.deleted_rows.count
+    }
     
     /**
      * Gets the character of how a boolean would appear in the table. This should mainly be used to convert the boolean into a string, to which you want to insert into the row
@@ -422,14 +431,11 @@ class DBFWriter {
      * - Since: 1.0
      */
     private func writeBytes() throws -> Data {
-//        let buffer_len: Int = self.dbfTable.getRows().count * 32 + 1
-//        let buffer_len: Int = self.dbfTable.getTotalBytes()
         let header_len: Int = self.dbfTable.getTotalBytesHeader()
         let bytes_len: Int = self.dbfTable.getTotalBytesPerField()
         let one_record_len: Int = self.dbfTable.getTotalBytesOneRecord()
-//        let buffer_len: Int = (header_len + bytes_len) * 6
         let buffer_len: Int = header_len + bytes_len + 1
-        //TODO: BYTES PER RECORD
+        let num_records: Int = self.dbfTable.getTotalRecordCount()
         var buffer: Data = Data(repeating: 0, count: buffer_len)
         // write up header
         // byte 0 should be dbf version
@@ -440,7 +446,7 @@ class DBFWriter {
         buffer[3] = UInt8(Calendar.current.component(.day, from: Date()))
         // number of records in the table
         buffer.withUnsafeMutableBytes { (bytess: UnsafeMutableRawBufferPointer) in
-            bytess.storeBytes(of: UInt32(self.dbfTable.getRows().count.littleEndian), toByteOffset: 4, as: UInt32.self)
+            bytess.storeBytes(of: UInt32(num_records.littleEndian), toByteOffset: 4, as: UInt32.self)
         }
         // length of header
         buffer.withUnsafeMutableBytes { (bytess: UnsafeMutableRawBufferPointer) in
@@ -448,13 +454,11 @@ class DBFWriter {
         }
         // number of bytes per record
         buffer.withUnsafeMutableBytes { (bytess: UnsafeMutableRawBufferPointer) in
-//            bytess.storeBytes(of: UInt16(bytes_len.littleEndian), toByteOffset: 10, as: UInt16.self)
             bytess.storeBytes(of: UInt16(one_record_len.littleEndian), toByteOffset: 10, as: UInt16.self)
         }
         // columns (field descriptors)
         let cols: [DBFTable.DBFColumn] = self.dbfTable.getColumns()
         // loop over all cols and set them up
-//        var current_offset: Int = 0x0020
         var current_offset: Int = 32
         var byteoff: Int = 32
         for i in cols {
