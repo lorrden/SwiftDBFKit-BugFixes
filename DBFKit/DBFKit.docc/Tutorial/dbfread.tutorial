@@ -39,4 +39,16 @@
             }
         }
     }
+    
+    @Section(title: "Reading Memo Fields") {
+        @ContentAndMedia {
+            You may notice for memo fields how some number is returned (after reading). This number is actually an index (which you should convert to an integer). You see, memo fields are designed to hold string values with a length greater than 254. These strings are stored in a separate file known as a DBT (memo) file.
+        }
+        
+        @Steps {
+            @Step {
+                After calling the read, in your do-catch block, just convert the string to an int, and call the **readMemo** function to read the data inside the file.
+            }
+        }
+    }
 }

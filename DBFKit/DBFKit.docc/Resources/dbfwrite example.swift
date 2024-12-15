@@ -20,6 +20,13 @@ let ourWriter: DBFWriter = DBFWriter(dbfTable: ourTable)
 do {
     // try to write to our path
     try ourWriter.write(to: URL(fileURLWithPath: "path/to/our/dbf/file.dbf")!)
+    
+    for i in ourTable.getColumns() {
+        if i.columnType == .MEMO {
+            try ourWriter.writeDBT(to: URL(filePath: "path/to/our/dbt.dbt")) // for specifically writing DBT files if a memo field is present
+            break
+        }
+    }
 } catch {
     print("\(error)")
 }

@@ -5,7 +5,7 @@ DBFKit is a very easy way to read and write DBF files. It has been implemented c
 
 I decided to make this framework because I was working on a software (obviously I was using Swift to build an application) and I needed to be able to export DBF files. Since there is no framework or library written in Swift that achieves this, I built one.
 
-DBFKit should work with any DBF version (such as FoxPro and dBase III) for both reading and writing. I was able to test the writing capabilities by giving it to another dbf reader that is known to work to test the results. I used the famous python framework [dbfread](https://github.com/olemb/dbfread) to make sure all values can be properly read. Along with the reading capabilities of DBFKit I implemented on my own, I tested it with dbfread to make sure I get the same results.
+DBFKit should work with any DBF version (such as FoxPro and dBase III) for both reading and writing. I used the famous python framework [dbfread](https://github.com/olemb/dbfread) to make sure all values can be properly read. Along with the reading capabilities of DBFKit I implemented on my own, I tested it with dbfread to make sure I get the same results.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ DBFKit should work with any DBF version (such as FoxPro and dBase III) for both 
 ---
 
 ## Installation
-### DBFKit - 1.1
+### DBFKit - 1.2
 
 To install, download the single "dbf.swift" file and include that in your application to use DBFKit related functions.
 
@@ -107,13 +107,51 @@ do {
     print("\(error)")
 }
  ```
+ 
+ ### Reading & Writing with Memo Fields
+ 
+ If you are reading or writing a DBF and at least one Memo field is present, make sure you follow the example below, as it highlights how to do it properly.
+ 
+ ```swift
+let table: DBFTable = DBFTable()
+
+// assume we have added some columns, and one of them is of type memo
+
+do {
+    // write the file like you normal would
+    let writer: DBFWriter = DBFWriter(dbfTable: table)
+    
+    try writer.write(to: URL(filePath: "path/to/file.dbf")!)
+    
+    // DBFKit doesn't automatically write to the DBT file for memo fields
+    // you have to execute that yourself
+    
+    try writer.writeDBT(to URL(filePath: "path/to/memo_file.dbt")!)
+    
+    // for reading memo fields, do the following
+    let reader: DBFFile = DBFFile(path: "path/to/file.dbf")
+    
+    try reader.read()
+    
+    let index_of_memo: Int = Int(reader.getDBFTable().getRows()[0][0])! // we will assume first column is a memo field
+    // all memo fields carry an index of where the actual memo data is stored in the dbt file
+    // we just need to extract it using the method below
+    
+    let memo_data: String = reader.readMemo(file: URL(filePath: "path/to/memo_file.dbt")!, index: index_of_memo)
+    print(memo_data)
+} catch {
+    print("\(error)")
+}
+ ```
 
 ## Research
 
 Below are the sources I used to help me implement this.
 
-- https://en.wikipedia.org/wiki/.dbf
-- https://www.dbase.com/Knowledgebase/INT/db7_file_fmt.htm
+- https://en.wikipedia.org/wiki/.dbf (contains info about DBF file structure)
+- https://www.dbase.com/Knowledgebase/INT/db7_file_fmt.htm (more info on DBF file structure on official dBase website)
+- http://www.dbase.com/help/Design_Tables/IDH_TABLEDES_FIELD_TYPES.htm (more info about the different field types)
+- https://www.clicketyclick.dk/databases/xbase/format/dbt.html#DBT_STRUCT (DBT file structure info)
 
 Along with this, I have included the "Developer" folder which showed the process of how I reversed engineered this, and how DBF files are actually written. 
 

@@ -30,6 +30,10 @@
                 
                 @Code(name: "WriteToDBF.swift", file: "dbfwrite example.swift")
             }
+            
+            @Step {
+                Note that if you have any columns of type MEMO, you will need to call the **ourWriter.writeDBT** function to write the DBT file up, that holds the MEMO data.
+            }
         }
         
         @Assessments {

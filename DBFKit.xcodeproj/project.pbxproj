@@ -17,6 +17,7 @@
 		4C912EE52BE0987C008E7BE7 /* DBFKit.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C912ED72BE0987C008E7BE7 /* DBFKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C912EEF2BE0988E008E7BE7 /* dbf.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C912EEE2BE0988E008E7BE7 /* dbf.swift */; };
 		4CD41EA52BE991D1009F438B /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 4CD41EA42BE991D1009F438B /* LICENSE */; };
+		4CF14A5A2D0CFF1E003E2B29 /* writeme.dbt in Resources */ = {isa = PBXBuildFile; fileRef = 4CF14A592D0CFF18003E2B29 /* writeme.dbt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +43,7 @@
 		4C912EEE2BE0988E008E7BE7 /* dbf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = dbf.swift; sourceTree = "<group>"; };
 		4CD41EA32BE97AAC009F438B /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		4CD41EA42BE991D1009F438B /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		4CF14A592D0CFF18003E2B29 /* writeme.dbt */ = {isa = PBXFileReference; lastKnownFileType = text; path = writeme.dbt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +107,7 @@
 			isa = PBXGroup;
 			children = (
 				4C912EE32BE0987C008E7BE7 /* DBFKitTests.swift */,
+				4CF14A592D0CFF18003E2B29 /* writeme.dbt */,
 				4C4029482BE20B1F007199A0 /* writeme.dbf */,
 				4C4029442BE1C782007199A0 /* tdexport.dbf */,
 				4C4029422BE1C782007199A0 /* thexport.dbf */,
@@ -216,6 +219,7 @@
 				4C4029462BE1C98B007199A0 /* thexport.dbf in Resources */,
 				4C4029472BE1C98E007199A0 /* tsexport.dbf in Resources */,
 				4C4029492BE20B1F007199A0 /* writeme.dbf in Resources */,
+				4CF14A5A2D0CFF1E003E2B29 /* writeme.dbt in Resources */,
 				4C4029452BE1C989007199A0 /* tdexport.dbf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

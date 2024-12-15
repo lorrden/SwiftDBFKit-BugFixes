@@ -83,14 +83,19 @@ Now lets discuss the column data. To start with, the first thing we are writing 
 Note that for the numbers listed in the content column, those are all ASCII codes for each character respectively in "User". For instance, 85 is the character code for "U" and 115 is the character code for "s" and so on. Since we did not use up all 11 bytes, we do not have to fill in anything else from byte 4-10, we can leave it empty as the column name doesn't take up all the space.
 
 On the next byte, we give the column type. Note again that we are still writing these bytes in the buffer, not some kind of string. There are 5 different types of columns we can input. The possible types are given in the table below.
-| Column Type | What it is | What it means               |
-| ----------- | ---------- | --------------------------- |
-| C           | Character  | Any text (must be in ASCII) |
-| D           | Date       | The date                    |
-| F           | Float      | Decimal number              |
-| L           | Boolean    | Any boolean.                |
-| M           | Memo       | Any ASCII text              |
-| N           | Numeric    | Just a number               |
+| Column Type | What it is    | What it means                       |
+| ----------- | ------------- | ----------------------------------- |
+| C           | Character     | Any text (must be in ASCII)         |
+| D           | Date          | The date                            |
+| F           | Float         | Decimal number                      |
+| L           | Boolean       | Any boolean.                        |
+| M           | Memo          | Any ASCII text                      |
+| N           | Numeric       | Just a number                       |
+| I           | Long          | long (number)                       |
+| +           | Autoincrement | Same as long                        |
+| G           | OLE           | Just holds an index to a memo block |
+| B           | Binary        | Same as OLE                         |
+| O           | Double        | A double value                      |
 
 For the date, we are passing in some numbers in the format of YYYYMMDD. And for boolean, we are passing in "T" (for true), "F" (for false), or "?" (for uninitialized)
 
@@ -118,6 +123,43 @@ For the next item to write, which is "22", we must start at the next valid byte.
 Once we are done writing a row, and we are ready to start writing the next one, we begin writing it on byte n + 1 (where n is the byte where the previous row ends), and the pattern continues. Remember that the first byte written for any row is the byte that determines if the row is active or not. So on byte n + 1, mark it with a space or asterik, then continue the pattern.
 
 After we have finished writing all the rows, we don't need to do anything more. The very last byte (or the one after the last row) is the eof marker. That is 0x1A.
+
+## Writing Memo Fields
+
+A normal column with type "C" only allows you to store text up to size 254. Memo fields allow you to store larger text. Here is the process of how it works, and how you would write it in the DBF file.
+
+To start with, the length of a memo field (**specifically in a DBF file**) will always be 10 [bytes]. The value stored in these bytes is a number, specifically, an index. Before I explain what this index means, lets talk about DBT files for a moment.
+
+A DBT file _is a memo_ file. In other words, this is where we would store the text in the memo field. Usually, this file has the exact same name as the DBF file (and is in the same directory). The file structure of a DBT file (specifically for dBase version 3) is as follows:
+
+| Byte    | What it is                                    |
+|---------|-----------------------------------------------|
+|0        |An integer pointing to the next available index|
+|1-511    |Nothing (should all be set to "0")             |
+|512-1024 |Memo block 1                                   |
+|1025-1536|Memo block 2                                   |
+
+I hope you see the pattern here for the file structure. We have the file header which occupies the first 512 bytes. Now picture the above table as a list. The header represents index 0 in that list. Memo block 1 represents element at index 1 in the list, Memo block 2 represents element at index 2 in the list and so on.
+
+Essentially, the value we put in the memo field in the DBF file is a number, which represents the index of the block it points to. Note that none of these indexes should point to index 0, as that is the header of the DBT file. However, please take note of byte 0 in the DBT header. This byte dictates the next available index for writing another memo block. For instance, if we have a DBT file with 2 memo blocks (this excludes the header, so similar to what we have above as the example), byte 0 would be set to the number 3.
+
+The number we put in the memo field (in the DBF file) should be written in the exact same way we write any other value in DBF files.
+
+Okay, now lets talk about how we write the actual data in each of these memo blocks. Note that the data we write into a memo block is the \*real\* (real means the actual text the field holds, which could have text with a size larger than 254) value the memo field holds.
+
+For the first example, lets assume we have a text with a size smaller than 510 (we will say 312). We will also assume that its corresponding memo block index is 1. We would first write down (starting from byte 512) this text like we would write any other text in a DBF file. Once we finish that, we skip all the way to byte 1024 (or the byte that represents the end index of the block) and note down the EOF marker (0x1A) as a terminator for the block.
+
+But what if we had a text larger than 512, what do we do? Thats pretty easy actually! We continue writing to the next block! So if we have a string with length 600 (and we start on block 1), we continue writing to block 2. We don't put any terminators or any sign of the text stops. Once we have written all the bytes, we skip to the end of the block (we finished writing on) and make the last two bytes the EOF markers (to denote the terminators). So in our example, we would put those two EOF markers on bytes 1535 and 1536. Then, we set byte 0 to the value of "3," since the next memo data will begin on block 3.
+
+## Writing/Reading Double/Autoincrement/Long fields
+
+These are probably the hardest fields to work with. To start with, _double_ fields will always be 8 bytes, and the other two (which by the way are identical) will always be 4 bytes. The character which denotes double fields is "O" while for autoincrement it is "+" and long is "I".
+
+The idea for writing the values of these fields is pretty simple. Please note that just because the long field, for example, will always be 4 bytes in size _doesn't necessarily imply that the character length of a number_ must be 4. The same goes with the other two. So basically, we have to take our integer (or double if the field type is double) and convert it into a 4 byte representation of UInt8 (or 8 for double).
+
+Sounds confusing? Yeah it probably is. So let me try explaning it like this. You take a number, lets say 5, and first you have to convert it into a 32 bit integer (or if double, 64 bit float). You then take that number, and then convert it into an array (or new buffer) of 4 UInt8s (or 8 for double). And all the values in that array, you would write down into the main buffer. And thats how you would write those data types in each record!
+
+That makes reading these values kind of annoying too. But the process is similar. Just take 4 bytes (or 8 for double) at the column index position in the record, put whatever those UInt8 are in an array, and convert all the values in that array into the actual number.
 
 ---
 

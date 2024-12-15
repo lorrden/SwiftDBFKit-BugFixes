@@ -18,6 +18,13 @@ let ourFile: DBFFile = DBFFile(path: "path/to/dbf/file.dbf")
 
 do {
     try ourFile.read()
+    
+    // you can also read any memo fields by converting their strings read into ints
+    for i in ourFile.getDBFTable().getColumns() {
+        if i.columnType == .MEMO {
+            let memo_data: String = try ourFile.readMemo(file: URL(filePath: "path/to/dbt.dbt"), index: Int(ourFile.getDBFTable().getRows()[0][0])!) // assuming col 0 is memo field
+        }
+    }
 } catch {
     print("\(error)")
 }

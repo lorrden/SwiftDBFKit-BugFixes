@@ -25,7 +25,12 @@ This is probably one of the most important classes there are for DBFKit. This is
 - getTotalBytesPerField (public function)
 - getBoolValue (public static function)
 - getDateValue (public static function)
-- geBoolFromDBFValue (public static function)
+- getBoolFromDBFValue (public static function)
+- DATE\_COUNT (public static variable)
+- BOOL\_COUNT (public static variable)
+- MEMO\_COUNT (public static variable)
+- LONG\_COUNT (public static variable)
+- DOUBLE\_COUNT (public static variable)
 
 ### Sample Usage of Each Method
 
@@ -43,6 +48,12 @@ let colType2 = theTable.ColumnType.DATE // date (Date DBF type) column type
 let colType3 = theTable.ColumnType.FLOAT // float (Float DBF type) column type
 let colType4 = theTable.ColumnType.NUMERIC // number (Numeric DBF type) column type
 let colType5 = theTable.ColumnType.BOOL // boolean (Logical DBF type) column type
+let colType6 = theTable.ColumnType.MEMO // memo column type
+let colType7 = theTable.ColumnType.OLE // OLE column type
+let colType8 = theTable.ColumnType.BINARY // binary column type
+let colType9 = theTable.ColumnType.LONG // long column type
+let colType10 = theTable.ColumnType.AUTOINCREMENT // autoincrement column type
+let colType11 = theTable.ColumnType.DOUBLE // double column type
 
 // the DBFTable.DBFColumn struct has the following data attached:
 // note that the "count" parameter in DBFColumn dictates the maximum data length allowed for a particular element in a row
@@ -80,6 +91,13 @@ This is what's used to write the DBF files. It has a few key properties worth me
 - dbfTable (public var, DBFTable type)
 - writeBytes (private (for internal use) function)
 - write (public function)
+- encryption\_flag (public variable)
+- dbt\_data (private variable)
+- dbf\_next\_block\_index (private variable)
+- initDBT (private function)
+- deinitDBT (private function)
+- writeBytesDBT (string, accepts any string) (private function)
+- writeDBT (public function)
 
 ```swift
 import Foundation
@@ -97,6 +115,9 @@ theTable.dbfTable = theTable // for easy changing
 do {
     // we must do the writing in a do-catch block to catch errors
     try writer.write(to: URL(fileURLWithPath: "insert/path/here/dbf")!)
+
+    // if you have any memo fields, you should write to the DBT file
+    try writer.writeDBT(to: URL(fileURLWithPath: "path/to/dbt.dbt")!) // once again ONLY execute this if you have a ColumnType.MEMO present in your DBFTable
 } catch {
     print("\(error)")
 }
@@ -118,6 +139,9 @@ The last important class. This class is mainly used for reading DBF files. It co
 - getVersion (public function, a getter for dbfVersion)
 - getNumRecords (public function, a getter for numRecords)
 - read (public function, reads the dbf file given a path)
+- is\_encrypted (public variable, determines if the dbf file read has the encryption flag present)
+- incomplete\_transaction (public variable, determines if the dbf file read has an incomplete transaction flag present)
+- readMemo (public function)
 
 ```swift
 import Foundation
@@ -134,6 +158,9 @@ do {
     let recordsRead: Int = reader.getNumRecords()! // num records (rows) read
     let lastUpdate: Date = reader.getLastUpdate()! // date of last update
     let version: UInt8 = reader.getVersion() // version of dbf file read
+
+    // if you have any memo fields to read, execute the following
+    let memo_data: String = reader.readMemo(dbt: URL(filePath: "path/to/dbt.dbt"), index: 1)
 } catch {
     print("\(error)")
 }
