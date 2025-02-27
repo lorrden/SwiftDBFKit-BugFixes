@@ -151,7 +151,7 @@ For the first example, lets assume we have a text with a size smaller than 510 (
 
 But what if we had a text larger than 512, what do we do? Thats pretty easy actually! We continue writing to the next block! So if we have a string with length 600 (and we start on block 1), we continue writing to block 2. We don't put any terminators or any sign of the text stops. Once we have written all the bytes, we skip to the end of the block (we finished writing on) and make the last two bytes the EOF markers (to denote the terminators). So in our example, we would put those two EOF markers on bytes 1535 and 1536. Then, we set byte 0 to the value of "3," since the next memo data will begin on block 3.
 
-## Writing/Reading Double/Autoincrement/Long fields
+## Writing/Reading Double/Autoincrement/Long Fields
 
 These are probably the hardest fields to work with. To start with, _double_ fields will always be 8 bytes, and the other two (which by the way are identical) will always be 4 bytes. The character which denotes double fields is "O" while for autoincrement it is "+" and long is "I".
 
@@ -160,6 +160,16 @@ The idea for writing the values of these fields is pretty simple. Please note th
 Sounds confusing? Yeah it probably is. So let me try explaning it like this. You take a number, lets say 5, and first you have to convert it into a 32 bit integer (or if double, 64 bit float). You then take that number, and then convert it into an array (or new buffer) of 4 UInt8s (or 8 for double). And all the values in that array, you would write down into the main buffer. And thats how you would write those data types in each record!
 
 That makes reading these values kind of annoying too. But the process is similar. Just take 4 bytes (or 8 for double) at the column index position in the record, put whatever those UInt8 are in an array, and convert all the values in that array into the actual number.
+
+## Writing/Reading Timestamp Fields
+
+Timestamp fields are similar to Date fields. The only difference between the two is that timestamp is supposed to have the ability to include time. Before learning about how to actually write it, lets examine what value it holds.
+
+Timestamp is a field which is 8 bytes at maximum (and yes, all 8 of those bytes are written to, so like with the Long field type, some converting will need to be done). The first 4 bytes represent the date, and the last 4 represent the time. The date is the number of days since January 1 4713 BC. For instance, if you have a date of September 14, 2015, you would need to compute the number of days since January 1 4713 BC to that date first. Then, you would take that number, and convert it into 4 bytes (kind of like with Autoincrement/Long fields, it is the exact same process).
+
+Like I said before, the time takes up the last 4 bytes of data. To store it, first completely convert your time into milliseconds. Yes, you would need to convert your hours, minutes, and seconds into milliseconds. You then take that number, and convert it into 4 bytes (just like with Autoincrement/Long fields).
+
+And thats how Timestamp fields are written! Reading them should therefore not be that challenging either. First, just take the first 4 bytes of data, convert them into a number (which would represent the number of days since January 1 4713 BC), and compute the date given the information you have. That is probably the most challenging part. The last 4 bytes should be extremely easy to convert. All you have to do is convert those last 4 bytes into a number (which would represent your milliseconds), and then convert it all into hours/minutes/seconds.
 
 ---
 

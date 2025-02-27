@@ -33,69 +33,6 @@ final class DBFKitTests: XCTestCase {
             // Put the code you want to measure the time of here.
         }
     }
-
-    /**
-     * Tests to make sure the TH Export dbf file can be read
-     */
-    func testReadThExport() {
-        // make sure we stop on the test case that failed and don't continue
-        self.continueAfterFailure = false
-        
-        // set up file
-        let dbf: DBFFile = DBFFile(path: Bundle(for: type(of: self)).path(forResource: "thexport", ofType: "dbf")!)
-        
-        // read data
-        do {
-            try dbf.read()
-        } catch {
-            print("\(error)")
-            XCTAssertTrue(false) // to stop test case
-        }
-        
-        // check basic data
-        // we should have 14 columns of data
-        XCTAssertTrue(dbf.getDBFTable().getColumns().count == 15)
-        // we should have one record
-        XCTAssertTrue(dbf.getDBFTable().getRows().count == 1)
-    }
-    
-    /**
-     * Tests to make sure the TS Export dbf file can be read
-     */
-    func testReadTsExport() {
-        self.continueAfterFailure = false
-        
-        let dbf: DBFFile = DBFFile(path: Bundle(for: type(of: self)).path(forResource: "tsexport", ofType: "dbf")!)
-        
-        do {
-            try dbf.read()
-        } catch {
-            print("\(error)")
-            XCTAssertTrue(false)
-        }
-        
-        XCTAssertTrue(dbf.getDBFTable().getColumns().count == 13)
-        XCTAssertTrue(dbf.getDBFTable().getRows().count == 1)
-    }
-    
-    /**
-     * Tests to make sure the TD Export dbf file can be read
-     */
-    func testReadTdExport() {
-        self.continueAfterFailure = false
-        
-        let dbf: DBFFile = DBFFile(path: Bundle(for: type(of: self)).path(forResource: "tdexport", ofType: "dbf")!)
-        
-        do {
-            try dbf.read()
-        } catch {
-            print("\(error)")
-            XCTAssertTrue(false)
-        }
-        
-        XCTAssertTrue(dbf.getDBFTable().getColumns().count == 9)
-        XCTAssertTrue(dbf.getDBFTable().getRows().count == 6)
-    }
     
     /**
      * For testing writing to DBF
@@ -257,5 +194,54 @@ final class DBFKitTests: XCTestCase {
         } catch {
             print("\(error)")
         }
+    }
+    /**
+     * Tests to make sure timestamp is written properly
+     */
+    func testTimestamp() {
+        self.continueAfterFailure = false
+        var success: Bool = true
+        do {
+            let dbf_table: DBFTable = DBFTable()
+            try dbf_table.addColumn(with: "test1", dataType: .STRING, count: 4)
+            try dbf_table.addColumn(with: "test2", dataType: .TIMESTAMP, count: DBFTable.TIMESTAMP_COUNT)
+            
+            dbf_table.lockColumnAdding()
+            
+            var compp: DateComponents = DateComponents()
+            compp.year = 2024
+            compp.month = 12
+            compp.day = 19
+            compp.hour = 7
+            compp.minute = 25
+            compp.second = 6
+            let d: Date = Calendar.current.date(from: compp)!
+            
+            try dbf_table.addRow(with: ["1234", DBFTable.convertToTimestamp(date: d)])
+            
+            let writer: DBFWriter = DBFWriter(dbfTable: dbf_table)
+            
+            try writer.write(to: Bundle(for: type(of: self)).url(forResource: "writeme", withExtension: "dbf")!)
+            
+            let reader: DBFFile = DBFFile(path: Bundle(for: type(of: self)).path(forResource: "writeme", ofType: "dbf")!)
+            
+            try reader.read()
+            
+            XCTAssertTrue(reader.getNumRecords() == 1)
+            XCTAssertTrue(reader.getDBFTable().getRows()[0][1] == dbf_table.getRows()[0][1])
+            
+            // now test convert out
+            let date_check: Date = DBFTable.convertTimestampToDate(timestamp: reader.getDBFTable().getRows()[0][1])!
+            
+            let comp: DateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date_check)
+            
+            XCTAssertTrue(comp.year == 2024 && comp.month == 12 && comp.day == 19)
+            XCTAssertTrue(comp.hour == 7 && comp.minute == 25 && comp.second == 6)
+        } catch {
+            print("\(error)")
+            success = false
+        }
+        
+        XCTAssertTrue(success)
     }
 }

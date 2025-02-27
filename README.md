@@ -18,11 +18,11 @@ DBFKit should work with any DBF version (such as FoxPro and dBase III) for both 
 ---
 
 ## Installation
-### DBFKit - 1.2
+### DBFKit - 1.3
 
 To install, download the single "dbf.swift" file and include that in your application to use DBFKit related functions.
 
-DBFKit is designed to work on both MacOS and iOS (any version should work, but later ones are reccomended)
+DBFKit is designed to work on both MacOS and iOS (any version should work, but later ones are reccomended).
 
 ## How to use
 
@@ -141,6 +141,36 @@ do {
     print(memo_data)
 } catch {
     print("\(error)")
+}
+ ```
+ 
+ ### Reading & Writing Fields of Type Bool/Date/Timestamp
+ 
+ You may have noticed how the records we input into DBFTable only accepts an array of strings. So data of type bool/date/timestamp need to be converted into a _dbf string_ which DBFKit can understand. The example below illustrates how to do thi.
+ 
+ ```swift
+ do {
+    let dbf_table: DBFTable = DBFTable()
+    try dbf_table.addColumn(with: "test_bool", dataType: .BOOL, count: DBFTable.BOOL_COUNT)
+    try dbf_table.addColumn(with: "test_date", dataType: .DATE, count: DBFTable.DATE_COUNT)
+    try dbf_table.addColumn(with: "test_timestamp", dataType: .TIMESTAMP, count: DBFTable.TIMESTAMP_COUNT)
+    
+    dbf_table.lockColumnAdding()
+    
+    // we can use static functions of DBFTable to convert different values into DBF strings
+    let dbf_bool: String = DBFTable.getBoolValue(bool: true)
+    let dbf_date: String = DBFTable.getDateValue(date: Date())
+    let dbf_timestamp: String = DBFTable.convertToTimestamp(date: Date())
+    
+    dbf_table.addRow(with: [dbf_bool, dbf_date, dbf_timestamp])
+    
+    // you can also convert out of the dbf strings using other static functions
+    let actual_bool_value: Bool? = DBFTable.getBoolFromDBFValue(dbfValue: "T") // note that sometimes booleans in DBF files can be left uninitialized
+    let actual_timestamp_value: Date? = DBFTable.convertTimestampToDate(timestamp: dbf_table.getRows()[0][2])
+    // dates are pretty easy to convert alone
+ } catch {
+    print("\(error)")
+ }
 }
  ```
 

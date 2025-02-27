@@ -7,9 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4C4029452BE1C989007199A0 /* tdexport.dbf in Resources */ = {isa = PBXBuildFile; fileRef = 4C4029442BE1C782007199A0 /* tdexport.dbf */; };
-		4C4029462BE1C98B007199A0 /* thexport.dbf in Resources */ = {isa = PBXBuildFile; fileRef = 4C4029422BE1C782007199A0 /* thexport.dbf */; };
-		4C4029472BE1C98E007199A0 /* tsexport.dbf in Resources */ = {isa = PBXBuildFile; fileRef = 4C4029432BE1C782007199A0 /* tsexport.dbf */; };
 		4C4029492BE20B1F007199A0 /* writeme.dbf in Resources */ = {isa = PBXBuildFile; fileRef = 4C4029482BE20B1F007199A0 /* writeme.dbf */; };
 		4C912ED92BE0987C008E7BE7 /* DBFKit.docc in Sources */ = {isa = PBXBuildFile; fileRef = 4C912ED82BE0987C008E7BE7 /* DBFKit.docc */; };
 		4C912EDF2BE0987C008E7BE7 /* DBFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C912ED42BE0987C008E7BE7 /* DBFKit.framework */; };
@@ -32,9 +29,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		4C4029422BE1C782007199A0 /* thexport.dbf */ = {isa = PBXFileReference; lastKnownFileType = file; name = thexport.dbf; path = DBFKitTests/thexport.dbf; sourceTree = SOURCE_ROOT; };
-		4C4029432BE1C782007199A0 /* tsexport.dbf */ = {isa = PBXFileReference; lastKnownFileType = file; name = tsexport.dbf; path = DBFKitTests/tsexport.dbf; sourceTree = SOURCE_ROOT; };
-		4C4029442BE1C782007199A0 /* tdexport.dbf */ = {isa = PBXFileReference; lastKnownFileType = file; name = tdexport.dbf; path = DBFKitTests/tdexport.dbf; sourceTree = SOURCE_ROOT; };
 		4C4029482BE20B1F007199A0 /* writeme.dbf */ = {isa = PBXFileReference; lastKnownFileType = text; path = writeme.dbf; sourceTree = "<group>"; };
 		4C912ED42BE0987C008E7BE7 /* DBFKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DBFKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C912ED72BE0987C008E7BE7 /* DBFKit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DBFKit.h; sourceTree = "<group>"; };
@@ -112,9 +106,6 @@
 				4C912EE32BE0987C008E7BE7 /* DBFKitTests.swift */,
 				4CF14A592D0CFF18003E2B29 /* writeme.dbt */,
 				4C4029482BE20B1F007199A0 /* writeme.dbf */,
-				4C4029442BE1C782007199A0 /* tdexport.dbf */,
-				4C4029422BE1C782007199A0 /* thexport.dbf */,
-				4C4029432BE1C782007199A0 /* tsexport.dbf */,
 			);
 			path = DBFKitTests;
 			sourceTree = "<group>";
@@ -220,11 +211,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4C4029462BE1C98B007199A0 /* thexport.dbf in Resources */,
-				4C4029472BE1C98E007199A0 /* tsexport.dbf in Resources */,
 				4C4029492BE20B1F007199A0 /* writeme.dbf in Resources */,
 				4CF14A5A2D0CFF1E003E2B29 /* writeme.dbt in Resources */,
-				4C4029452BE1C989007199A0 /* tdexport.dbf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -19,14 +19,14 @@ enum DBFError: Error {
 
 /**
  * A DBF table which stores all the data
- * - Version: 1.1
+ * - Version: 1.2
  * - Since: 1.0
  */
 class DBFTable {
     
     /**
      * A column data type
-     * - Version: 1.1
+     * - Version: 1.2
      * - Since: 1.0
      */
     enum ColumnType: Character {
@@ -65,7 +65,7 @@ class DBFTable {
         /// - Since: 1.2
         /// > Note: This field is purely identical to OLE (at least in DBF files. In FoxPro, it is different. DBFKit at the moment can only read/write this field as the DBF version)
         case BINARY = "B"
-        /// Represents the column of type long (this usually is made available specifically in Visual Fox Pro files)
+        /// Represents the column of type long. It really just stores an integer
         /// - Version: 1.0
         /// - Since: 1.2
         /// > Note: There are two characters in DBF files that represent this. They are 'I' and '+'. This data type is always 4 bytes long
@@ -80,6 +80,11 @@ class DBFTable {
         /// - Since: 1.2
         /// > Note: This data type is usually stored as 8 bytes in the DBF file. This **does not** mean that that actual value has to be no more than 8 character in size.
         case DOUBLE = "O"
+        /// Represents the column of type timestamp
+        /// - Version: 1.0
+        /// - Since: 1.3
+        /// > Note: This data type holds two values, the actual date (which is the number of days since January 1 4713 BC) and the time. When writing to this field, to represent the data accurately, call DBFTable.convertToTimestamp to create a string representation of the data
+        case TIMESTAMP = "@"
     }
     
     /**
@@ -167,6 +172,12 @@ class DBFTable {
      * > Note: This length does not mean the double passed in has to be no more than 8 characters in length. The length is merely an indicator of how many bytes it takes up in the DBF file
      */
     public static let DOUBLE_COUNT: Int = 8
+    /**
+     * The default length for the timestamp field
+     * - Version: 1.0
+     * - Since: 1.3
+     */
+    public static let TIMESTAMP_COUNT: Int = 8
     
     /**
      * Locks column adding
@@ -180,11 +191,11 @@ class DBFTable {
     /**
      * Determines if columns can be added. This acts as a simple getter for isColumnLocked
      * - Returns: A boolean indicating if columns can be added
-     * - Version: 1.0
+     * - Version: 1.1
      * - Since: 1.0
      */
     public func canAddColumns() -> Bool {
-        return self.isColumnLocked
+        return !self.isColumnLocked
     }
     
     /**
@@ -194,13 +205,17 @@ class DBFTable {
      *  - type: Required. The type of data the column conforms to
      *  - len: Required. The field maximum length. Maximum value 254 allowed
      * - Throws: An error if column adding is locked or the column name is not valid
-     * - Version: 1.1
+     * - Version: 1.2
      * - Since: 1.0
      */
     public func addColumn(with name: String, dataType type: ColumnType, count len: Int) throws {
         // make sure we are allowed to add columns to the list
         if self.isColumnLocked {
             throw DBFError.COLUMN_ADD_ERR("Cannot add columns to DBF table because column adding is locked")
+        }
+        // the column name length is also restricted to 32
+        if name.count > 32 {
+            throw DBFError.COLUMN_ADD_ERR("The column name must be <= 32 characters long")
         }
         // make sure name has at least one valid character in it
         if name.replacingOccurrences(of: " ", with: "") == "" {
@@ -224,6 +239,9 @@ class DBFTable {
         } else if type == .DATE && lenm != DBFTable.DATE_COUNT {
             lenm = DBFTable.DATE_COUNT
             os_log("Incorrect Date field length given \"\(len)\". It was auto-corrected to \(DBFTable.DATE_COUNT) {DBFTable.DATE_COUNT}")
+        } else if type == .TIMESTAMP && lenm != DBFTable.TIMESTAMP_COUNT {
+            lenm = DBFTable.TIMESTAMP_COUNT
+            os_log("Incorrect Timestamp field length given \"\(len)\". It was auto-corrected to \(DBFTable.TIMESTAMP_COUNT) {DBFTable.TIMESTAMP_COUNT}")
         }
         
         // make sure len is in proper amount
@@ -441,11 +459,125 @@ class DBFTable {
         }
         throw DBFError.READ_ERROR("Unknown DBF bool value \"\(dbfValue)\" given")
     }
+    /**
+     * Converts the date and time into a timestamp
+     * - Parameters:
+     *  - date: Required. The date to convert
+     *  - hours: Required. The hour
+     *  - minutes: Required. The minute
+     *  - seconds: Required. The second
+     * - Returns: A string representation of the timestamp
+     * - Version: 1.0
+     * - Since: 1.3
+     */
+    private static func convertToTimestamp(date: Date, hours: Int, minutes: Int, seconds: Int) -> String {
+        // we need to compute how many days away date is from the date 01/01/4713 BC
+        var old_date: DateComponents = DateComponents()
+        old_date.month = 1
+        old_date.day = 1
+        old_date.year = -4713
+        
+        let fd = Calendar.current.startOfDay(for: Calendar.current.date(from: old_date)!)
+        let ed = Calendar.current.startOfDay(for: date)
+        let num_days = Calendar.current.dateComponents([.day], from: fd, to: ed).day! + 1
+        
+        // as for the time, we need to convert it all into milliseconds
+        let ms: Int = ((hours * 60 * 60) + (minutes * 60) + seconds) * 1000 // there are 1000 ms in seconds
+        
+        // we will just use a space to separate the two core values that will be stored in the timestamp
+        return "\(num_days) \(ms)"
+    }
+    /**
+     * Converts the date into a timestamp
+     * - Parameters:
+     *  - date: Required. The date to convert
+     * - Returns: A string representation of the time
+     * - Version: 1.0
+     * - Since: 1.3
+     */
+    public static func convertToTimestamp(date: Date) -> String {
+        let d: DateComponents = Calendar.current.dateComponents([.hour, .minute, .second], from: date)
+        
+        // just call the private static function which holds the full conversion
+        return DBFTable.convertToTimestamp(date: date, hours: d.hour!, minutes: d.minute!, seconds: d.second!)
+    }
+    /**
+     * Converts a timestamp to a date (which should be readable)
+     * - Parameters:
+     *  - timestamp: Required. The string (which should appear similar to how convertToTimestamp generates) to convert
+     * - Returns: nil on failure and the date on success
+     * - Version: 1.0
+     * - Since: 1.3
+     * > Note: this function only converts out of what convertToTimestamp generates (or what is read from the DBF file, both values are written in the exact same way for the sake of simplicity). The years, month, day, hour, minute, second are all stored into the single Date class
+     */
+    public static func convertTimestampToDate(timestamp: String) -> Date? {
+        // lets first divide up the strings into two parts
+        let parts: [String] = timestamp.split(separator: " ").map(String.init)
+        
+        // assert length is proper
+        if parts.count != 2 {
+            return nil
+        }
+        
+        let pt1: Int? = Int(parts[0])
+        let pt2: Int? = Int(parts[1])
+        
+        // lets make sure pt1 and pt2 are not nil
+        if pt1 == nil || pt2 == nil {
+            return nil
+        }
+        
+        var dc: DateComponents = DateComponents()
+        dc.day = 1
+        dc.month = 1
+        dc.year = -4713
+        let begin_date: Date = Calendar.current.date(from: dc)!
+        
+        // lets first parse the first part of the array
+        // this number should represent the number of days since 01/01/4713 BC
+        // so we have to compute what year, month, and day these number of days represent
+        let start_date: Date = Calendar.current.date(byAdding: .day, value: pt1!, to: begin_date)!
+        
+        // now make the components of start_date
+        var comp: DateComponents = Calendar.current.dateComponents([.year, .month, .day], from: start_date)
+        
+        // now comes the easy part
+        // we need to convert our milliseconds to hours/minutes/seconds
+        // begin by divindg by 1000 to convert the ms to seconds
+        let secondsk: Int = pt2! / 1000
+        
+        var seconds: Int = secondsk + 0
+        var minutes: Int = 0
+        var hours: Int = 0
+        
+        // lets see if there are at least 60 seconds in seconds
+        if seconds >= 60 {
+            // in that case lets move as many seconds as we can into minutes
+            minutes = Int(floor(Double(seconds) / 60.0))
+            seconds -= minutes * 60
+        }
+        
+        // we will do the same thing for minutes
+        if minutes >= 60 {
+            hours = Int(floor(Double(minutes) / 60.0))
+            minutes -= hours * 60
+        }
+        
+        comp.hour = hours
+        comp.minute = minutes
+        comp.second = seconds
+        
+        // okay we are good!
+        // turn the components into the actual date
+        let end_date: Date = Calendar.current.date(from: comp)!
+        
+        return end_date
+    }
 }
 
 /**
  * The core writer class
- * - Version: 1.1
+ * - Version: 1.2
  * - Since: 1.0
  */
 class DBFWriter {
@@ -583,7 +715,7 @@ class DBFWriter {
      *  - buffer: Required. A pointer to a buffer to write to
      *  - record: The record to write
      * - Throws: An error on failure
-     * - Version: 1.1
+     * - Version: 1.2
      * - Since: 1.1
      */
     private func writeBytesRecord(buffer: UnsafeMutablePointer<Data>, record: [String], current_offset: UnsafeMutablePointer<Int>) throws {
@@ -676,6 +808,43 @@ class DBFWriter {
                     current_offset.pointee += 1
                 }
                 
+                zi += 1
+                
+                continue
+            } else if self.dbfTable.getColumns()[zi].columnType == .TIMESTAMP {
+                // split up string
+                let split: [String] = z.split(separator: " ").map(String.init)
+                // validate length of split is 2
+                if split.count != 2 {
+                    throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) is not a valid timestamp")
+                }
+                
+                // now make sure boths parts are integers
+                let pt1: Int? = Int(split[0])
+                let pt2: Int? = Int(split[1])
+                
+                if pt1 == nil || pt2 == nil {
+                    throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) is not a valid timestamp")
+                }
+                
+                // both integers should be converted into Int32
+                var pt132: Int32 = Int32(pt1!)
+                var pt232: Int32 = Int32(pt2!)
+                
+                // now make the bytes
+                let b1: [UInt8] = withUnsafeBytes(of: &pt132, Array.init)
+                let b2: [UInt8] = withUnsafeBytes(of: &pt232, Array.init)
+                
+                // merge both arrays
+                let b3: [UInt8] = b1 + b2
+                
+                // write to buffer
+                for j in b3 {
+                    buffer.pointee[current_offset.pointee] = j
+                    current_offset.pointee += 1
+                }
+                
+                // adjust zi as needed
                 zi += 1
                 
                 continue
@@ -845,7 +1014,7 @@ class DBFWriter {
 
 /**
  * A simple DBF file
- * - Version: 1.1
+ * - Version: 1.2
  * - Since: 1.0
  */
 class DBFFile {
@@ -967,7 +1136,7 @@ class DBFFile {
     /**
      * Reads the DBF file given. Time complexity: O((n \* m) + r) where n is the number of columns written, m is the length of each column name, and r is the number of rows
      * - Throws: An error on read
-     * - Version: 1.1
+     * - Version: 1.2
      * - Since: 1.0
      */
     public func read() throws {
@@ -982,6 +1151,10 @@ class DBFFile {
         // open the file
 //        let buffer: Data = try Data(contentsOf: URL(string: self.filePath!)!)
         let buffer: Data = try Data(contentsOf: URL(filePath: self.filePath!))
+        // we should have at least 32 bytes
+        if buffer.count < 32 {
+            throw DBFError.READ_ERROR("Invalid DBF file")
+        }
         // byte 0 should be version
         let version: UInt8 = buffer[0]
         self.dbfVersion = version
@@ -1048,6 +1221,11 @@ class DBFFile {
             try self.dbfTable.addColumn(with: field_name, dataType: .init(rawValue: field_type)!, count: Int(field_len))
             bytec += 32
             current_byte = bytec
+            
+            // lets make sure current_byte is still valid
+            if current_byte >= buffer.count {
+                throw DBFError.READ_ERROR("Reached end of buffer while reading field names")
+            }
         }
         // make sure expected record count matches what was written earlier
         if expected_record_count != one_record_bytes {
@@ -1109,6 +1287,29 @@ class DBFFile {
                 }
                 
                 collect = String(d)
+            } else if self.dbfTable.getColumns()[col_index].columnType == .TIMESTAMP {
+                // pick up 8 bytes of data
+                bytes_collect = [buffer[current_byte], buffer[current_byte + 1], buffer[current_byte + 2], buffer[current_byte + 3], buffer[current_byte + 4], buffer[current_byte + 5], buffer[current_byte + 6], buffer[current_byte + 7]]
+                
+                current_byte += 8
+                
+                // first 4 bytes is number of days
+                // first half and second half are actually integers
+                let pt1: [UInt8] = [bytes_collect[0], bytes_collect[1], bytes_collect[2], bytes_collect[3]]
+                let pt2: [UInt8] = [bytes_collect[4], bytes_collect[5], bytes_collect[6], bytes_collect[7]]
+                
+                let data_value1: NSData = NSData(bytes: pt1, length: 4)
+                var data_v1: UInt32 = 0
+                data_value1.getBytes(&data_v1, length: 4)
+                data_v1 = UInt32(data_v1)
+                collect = String(Int(data_v1)) + " "
+                
+                // now do time
+                let data_value2: NSData = NSData(bytes: pt2, length: 4)
+                var data_v2: UInt32 = 0
+                data_value2.getBytes(&data_v2, length: 4)
+                data_v2 = UInt32(data_v2)
+                collect += String(Int(data_v2))
             } else {
                 // collect values as we pick them up
                 collect += String(UnicodeScalar(buffer[current_byte]))
@@ -1203,5 +1404,137 @@ class DBFFile {
         memo = String(decoding: block, as: Unicode.UTF8.self)
         
         return memo
+    }
+    /**
+     * Extracts all the blocks from the memo file and returns them all
+     * - Parameters:
+     *  - file: Required. A URL to the DBT file
+     * - Returns: A dictionary, with the key being the index of the dbt block, and the value being the data it holds
+     * - Throws: An error on read
+     * - Version: 1.0
+     * - Since: 1.3
+     * > Note: This function is designed to specifically read dBase III memo (dbt) files. It can also read dBase IV if and only if one block is 512 bytes in size. The data returned also includes the header block. But the only piece of data derived from the header is just the next available index for a DBT block. The rest of the elements are the real data that was held. Also note that any blocks which are stretched over to another block (because more space is needed for the data) **are merged** and the rest of the blocks are filled in a string that has no contents.
+     */
+    public func getDbtBlocks(file dbt: URL) throws -> Dictionary<Int, String> {
+        // retrieve data
+        let data = try Data(contentsOf: dbt)
+        
+        // assert that there are at least 512 bytes in data
+        if data.count < 512 {
+            throw DBFError.READ_ERROR("DBT file is too small")
+        }
+        
+        var dbt_blocks: Dictionary<Int, String> = Dictionary()
+        
+        // lets start by reading the header
+        // we only ever need byte 0 in the header
+        // the rest is garbage
+        // we will also convert that byte into a real integer and then into a string
+        dbt_blocks[0] = "\(Int(data[0]))"
+        
+        // okay now make sure byte 511 is eof marker (0x1A)
+        if data[511] != 0x1A {
+            throw DBFError.READ_ERROR("DBT file is not properly terminated")
+        }
+        
+        // now assert that the number of bytes data has is divisible by 512
+        if data.count % 512 > 0 {
+            throw DBFError.READ_ERROR("DBT file is not a valid DBT file")
+        }
+        
+        // read each block and add to dbt_blocks
+        var block_index: Int = 1
+        var next_available_index: Int = 1 // this is what we use for the dict
+        while 512 * block_index < data.count {
+            let block_start: Int = 512 * block_index
+            
+            // find eof marker
+            let start_block: Data = data[block_start..<data.count]
+            let eof_index: Int = start_block.firstIndex(of: 0x1A) ?? start_block.count
+            
+            // lets make sure eof_index was found
+            if eof_index == start_block.count {
+                throw DBFError.READ_ERROR("DBT file is not properly terminated")
+            }
+            
+            // if the eof marker stretches beyond 512 bytes, expect one more eof
+            if eof_index >= 512 {
+                if eof_index + 1 >= start_block.count {
+                    throw DBFError.READ_ERROR("DBT file is not properly terminated")
+                }
+                if start_block[eof_index + 1] != 0x1A {
+                    throw DBFError.READ_ERROR("DBT file is not properly terminated")
+                }
+                
+                // we also need to figure out how to increment block_index in a way where we get to the next block
+                let amount_increment: Int = Int(floor(Double(eof_index) / 512.0))
+                block_index += amount_increment
+            } else {
+                // else increment block_index by 1
+                block_index += 1
+            }
+            
+            let block: Data = start_block[..<eof_index]
+            
+            let block_string: String = String(decoding: block, as: Unicode.UTF8.self)
+            
+            // append to dbt_blocks
+            dbt_blocks[next_available_index] = block_string
+            
+            next_available_index += 1
+        }
+        
+        return dbt_blocks
+    }
+    /**
+     * Works similarly to getDbtBlocks except blocks which stretches over to another block are not merged (in other words, every single block is returned)
+     * - Parameters:
+     *  - file: Required. The DBT file to read from
+     * - Returns: All the blocks
+     * - Throws: An error on read
+     * - Version: 1.0
+     * - Since: 1.3
+     */
+    public func getDbtBlocksUnmerged(file dbt: URL) throws -> [String] {
+        // retrieve data
+        let data = try Data(contentsOf: dbt)
+        
+        // assert that there are at least 512 bytes in data
+        if data.count < 512 {
+            throw DBFError.READ_ERROR("DBT file is too small")
+        }
+        
+        var dbt_blocks: [String] = []
+        
+        // lets start by reading the header
+        // we only ever need byte 0 in the header
+        // the rest is garbage
+        // we will also convert that byte into a real integer and then into a string
+        dbt_blocks.append("\(Int(data[0]))")
+        
+        // okay now make sure byte 511 is eof marker (0x1A)
+        if data[511] != 0x1A {
+            throw DBFError.READ_ERROR("DBT file is not properly terminated")
+        }
+        
+        // now assert that the number of bytes data has is divisible by 512
+        if data.count % 512 > 0 {
+            throw DBFError.READ_ERROR("DBT file is not a valid DBT file")
+        }
+        
+        // read each block and add to dbt_blocks
+        var block_index: Int = 1
+        while 512 * block_index < data.count {
+            // we really won't be checking for the eof markers since we just want the blocks
+            // and some blocks could stretch over another, therefore complicating things
+            let block_start: Int = 512 * block_index
+            let block_end: Int = block_start + 511
+            let block_data: Data = data[block_start..<block_end]
+            let block_string: String = String(decoding: block_data, as: UTF8.self)
+            dbt_blocks.append(block_string)
+            block_index += 1
+        }
+        
+        return dbt_blocks
     }
 }

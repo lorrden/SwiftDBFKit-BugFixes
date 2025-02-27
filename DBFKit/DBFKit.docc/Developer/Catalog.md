@@ -26,11 +26,14 @@ This is probably one of the most important classes there are for DBFKit. This is
 - getBoolValue (public static function)
 - getDateValue (public static function)
 - getBoolFromDBFValue (public static function)
+- convertToTimestamp (public static function)
+- convertTimestampToDate (public static function)
 - DATE\_COUNT (public static variable)
 - BOOL\_COUNT (public static variable)
 - MEMO\_COUNT (public static variable)
 - LONG\_COUNT (public static variable)
 - DOUBLE\_COUNT (public static variable)
+- TIMESTAMP\_COUNT (public static variable)
 
 ### Sample Usage of Each Method
 
@@ -81,6 +84,8 @@ do {
 // since we can only insert strings into rows using the addRow function, getBoolValue helps convert your bool into a string the DBFReader/Writer can interpret
 // getDateValue acts similarlily to getBoolValue, but is meant for dates obviously!
 // getBoolValue is supposed to be able to take the DBF value and return the boolean representation of it
+// likewise convertToTimestamp converts a given date to a dbf string which DBFKit can write 
+// convertTimestampToDate converts out of whatever convertToTimestamp makes
 ```
 
 ## DBFWriter (Class)
