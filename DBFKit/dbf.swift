@@ -1169,7 +1169,10 @@ class DBFFile {
         self.lastUpdate = Calendar(identifier: .gregorian).date(from: dateComp)
         
         // next should be number of records
-        let rec: Int = Int(buffer[4])
+        let rec_size_data = buffer.subdata(in: 4..<8)
+        let rec = rec_size_data.withUnsafeBytes { ptr in
+          return Int(ptr.load(as: UInt32.self))
+        }
         self.numRecords = rec
         
         // byte 14 should be a flag for incomplete transaction
@@ -1188,9 +1191,12 @@ class DBFFile {
         }
         self.is_encrypted = enc == 1
         
-        // use byte 10 for future comparison
-        let one_record_bytes: Int = Int(buffer[10])
-        
+        // use byte 10 and 11 for future comparison
+        let one_record_bytes_data = buffer.subdata(in: 10..<12)
+        let one_record_bytes = one_record_bytes_data.withUnsafeBytes { ptr in
+          return Int(ptr.load(as: UInt16.self))
+        }
+
         // it is perfectly safe to skip to byte 32 where the col info begins
         // keep on collecting col info until the terminator is reached
         var current_byte: Int = 32
