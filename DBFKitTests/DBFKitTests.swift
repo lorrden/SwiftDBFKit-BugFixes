@@ -48,8 +48,10 @@ final class DBFKitTests: XCTestCase {
             try dbfTable.addColumn(with: "something", dataType: .STRING, count: 2)
             try dbfTable.addColumn(with: "anotherCol", dataType: .STRING, count: 4)
             dbfTable.lockColumnAdding()
-            try dbfTable.addRow(with: ["gg", "gg"]) // we test for row adding when it matches up to full col length and when it doesn't
-            
+
+            for _ in 0 ..< 512 {
+              try dbfTable.addRow(with: ["gg", "gg"]) // we test for row adding when it matches up to full col length and when it doesn't
+            }
             // init writer
             let writer: DBFWriter = DBFWriter(dbfTable: dbfTable)
             
@@ -59,7 +61,9 @@ final class DBFKitTests: XCTestCase {
             // we can now use our reader to confirm that the result succeeded
             let reader: DBFFile = DBFFile(path: Bundle(for: type(of: self)).path(forResource: "writeme", ofType: "dbf")!)
             try reader.read()
-            
+
+            XCTAssertEqual(512, reader.getNumRecords())
+            XCTAssertEqual(512, reader.getDBFTable().getTotalRecordCount())
             XCTAssertTrue(reader.getDBFTable().getColumns().count == 2)
             XCTAssertTrue(reader.getDBFTable().getRows()[0][0] == "gg")
         } catch {
