@@ -1139,7 +1139,7 @@ class DBFFile {
      * - Version: 1.2
      * - Since: 1.0
      */
-    public func read() throws {
+    public func read(encoding: String.Encoding = String.Encoding.utf8) throws {
         // make sure we have a valid path given
         if self.filePath == nil {
             throw DBFError.READ_ERROR("Cannot read DBF file because path is nil")
@@ -1331,7 +1331,7 @@ class DBFFile {
               row += ["\(dayValue) \(timeValue)"]
               break;
             default:
-              guard let str = String(data: data, encoding: .utf8) else {
+              guard let str = String(data: data, encoding: encoding) else {
                 throw DBFError.READ_ERROR("Can't decode string")
               }
               row += [str]
