@@ -718,11 +718,13 @@ class DBFWriter {
      * - Version: 1.2
      * - Since: 1.1
      */
-    private func writeBytesRecord(buffer: UnsafeMutablePointer<Data>, record: [String], current_offset: UnsafeMutablePointer<Int>) throws {
+    private func writeBytesRecord(buffer: UnsafeMutablePointer<Data>, record: [String], current_offset: UnsafeMutablePointer<Int>, encoding: String.Encoding) throws {
         // this function already assumes that the record was already marked with an '*' or ' '
         // all text should also be in ascii
         var zi: Int = 0
         for z in record {
+            var already_padded = false
+
             // first check if this field is long or autoincrement
             if self.dbfTable.getColumns()[zi].columnType == .AUTOINCREMENT || self.dbfTable.getColumns()[zi].columnType == .LONG {
                 // store int as 4 bytes
@@ -850,27 +852,27 @@ class DBFWriter {
                 continue
             } else {
                 // make sure z is not larger than the max length allowed for the column
-                if z.count > self.dbfTable.getColumns()[zi].count {
+                guard var converted: Data = z.data(using: encoding) else {
+                    throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) cannot be converted to UTF8 data")
+                }
+                let col = self.dbfTable.getColumns()[zi]
+                if converted.count > col.count {
                     throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) exceeds the maximum length for column")
                 }
-                for j in z {
-                    // should be 16 bit
-                    buffer.pointee.withUnsafeMutableBytes { (bytess: UnsafeMutableRawBufferPointer) in
-                        bytess.storeBytes(of: UInt16(j.asciiValue!), toByteOffset: current_offset.pointee, as: UInt16.self)
-                    }
-                    current_offset.pointee += 1
+
+                // Pad with zeroes
+                if converted.count < col.count {
+                    let extraData = Array(repeating: UInt8(0), count: col.count - converted.count)
+                    converted.append(contentsOf: extraData)
+                }
+
+                for j in 0 ..< converted.count {
+                   let byte = converted[j]
+                   buffer.pointee[current_offset.pointee] = byte
+                   current_offset.pointee += 1
                 }
             }
-            // add spaces until we reach the max length for col
-            let space_add: Int = self.dbfTable.getColumns()[zi].count - z.count
-            var zzi: Int = 0
-            while zzi < space_add {
-                buffer.pointee.withUnsafeMutableBytes { (bytes: UnsafeMutableRawBufferPointer) in
-                    bytes.storeBytes(of: UInt16(0x0000), toByteOffset: current_offset.pointee, as: UInt16.self)
-                }
-                current_offset.pointee += 1
-                zzi += 1
-            }
+
             zi += 1
         }
     }
@@ -882,7 +884,7 @@ class DBFWriter {
      * - Version: 1.2
      * - Since: 1.0
      */
-    private func writeBytes() throws -> Data {
+    private func writeBytes(encoding: String.Encoding) throws -> Data {
         // reset dbt info as needed
         self.deinitDBT()
         let header_len: Int = self.dbfTable.getTotalBytesHeader()
@@ -949,18 +951,21 @@ class DBFWriter {
         current_offset += 1
 //        buffer[current_offset + 1] = 0x0020
 //        current_offset += 2
+        assert(current_offset == header_len)
+        var iter = 0
         for i in self.dbfTable.getRows() {
             // add space to mark row present
             buffer[current_offset] = 0x0020
             current_offset += 1
-            try self.writeBytesRecord(buffer: &buffer, record: i, current_offset: &current_offset)
+            try self.writeBytesRecord(buffer: &buffer, record: i, current_offset: &current_offset, encoding: encoding)
+            iter += 1
         }
         // add any deleted rows
         for i in self.dbfTable.getDeletedRows() {
             // deleted rows are marked with an '*'
             buffer[current_offset] = 0x2A
             current_offset += 1
-            try self.writeBytesRecord(buffer: &buffer, record: i, current_offset: &current_offset)
+            try self.writeBytesRecord(buffer: &buffer, record: i, current_offset: &current_offset, encoding: encoding)
         }
         // eof flag
         buffer[current_offset] = 0x1A
@@ -982,9 +987,9 @@ class DBFWriter {
      * - Version: 1.0
      * - Since: 1.0
      */
-    public func write(to file: URL) throws {
+    public func write(to file: URL, encoding: String.Encoding = .utf8) throws {
         // get bytes
-        let buffer: Data = try self.writeBytes()
+        let buffer: Data = try self.writeBytes(encoding: encoding)
         // write to url
         try buffer.write(to: file)
     }
