@@ -853,7 +853,7 @@ class DBFWriter {
             } else {
                 // make sure z is not larger than the max length allowed for the column
                 guard var converted: Data = z.data(using: encoding) else {
-                    throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) cannot be converted to UTF8 data")
+                    throw DBFError.ROW_ADD_ERR("Row at index \(zi), element \(z) cannot be converted to selected encoding")
                 }
                 let col = self.dbfTable.getColumns()[zi]
                 if converted.count > col.count {
