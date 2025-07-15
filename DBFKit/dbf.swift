@@ -723,8 +723,6 @@ class DBFWriter {
         // all text should also be in ascii
         var zi: Int = 0
         for z in record {
-            var already_padded = false
-
             // first check if this field is long or autoincrement
             if self.dbfTable.getColumns()[zi].columnType == .AUTOINCREMENT || self.dbfTable.getColumns()[zi].columnType == .LONG {
                 // store int as 4 bytes
